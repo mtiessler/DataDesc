@@ -205,3 +205,20 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# Python
+*.pyc
+.venv/
+
+# Ignore all input data
+data/*
+!data/README.md
+
+# Ignore all generated outputs
+output/*
+!output/.gitkeep
+
+# OS
+.DS_Store
+
