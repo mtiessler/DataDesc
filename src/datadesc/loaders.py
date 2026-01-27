@@ -2,9 +2,9 @@ import polars as pl
 from openpyxl import load_workbook
 
 
-def load_csv(path, log):
-    log.info("Loading CSV: %s", path)
-    return pl.read_csv(path)
+def load_csv_lazy(path, log):
+    log.info("Scanning CSV (lazy): %s", path)
+    return pl.scan_csv(path)
 
 
 def _make_unique_headers(header):
@@ -24,7 +24,7 @@ def _make_unique_headers(header):
     return out
 
 
-def _sheet_to_frame(ws, log, path, sheet_name):
+def _sheet_to_frame(ws, log, path, sheet_name, max_rows=None):
     rows_iter = ws.iter_rows(values_only=True)
 
     # Find first non-empty row as header
@@ -44,6 +44,7 @@ def _sheet_to_frame(ws, log, path, sheet_name):
     n = len(header)
 
     data = []
+    count = 0
     for r in rows_iter:
         if r is None:
             continue
@@ -53,6 +54,15 @@ def _sheet_to_frame(ws, log, path, sheet_name):
         elif len(r) > n:
             r = r[:n]
         data.append(r)
+        count += 1
+        if max_rows is not None and count >= max_rows:
+            log.warning(
+                "Excel sheet truncated at %d rows: file=%s sheet=%s",
+                max_rows,
+                path.name,
+                sheet_name,
+            )
+            break
 
     # If there are no data rows, still return empty DF with columns
     if not data:
@@ -78,7 +88,7 @@ def _sheet_to_frame(ws, log, path, sheet_name):
     return pl.DataFrame(columns)
 
 
-def excel_to_frames(path, log):
+def excel_to_frames(path, log, max_rows=None):
     log.info("Loading Excel: %s", path)
     wb = load_workbook(filename=path, read_only=True, data_only=True)
 
@@ -86,7 +96,7 @@ def excel_to_frames(path, log):
     for sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
         try:
-            out[sheet_name] = _sheet_to_frame(ws, log, path, sheet_name)
+            out[sheet_name] = _sheet_to_frame(ws, log, path, sheet_name, max_rows=max_rows)
         except Exception as e:
             log.exception("Failed to parse sheet: file=%s sheet=%s err=%s", path.name, sheet_name, str(e))
             out[sheet_name] = pl.DataFrame()
@@ -94,19 +104,29 @@ def excel_to_frames(path, log):
     return out
 
 
-def load_datasets(path, log):
+def load_datasets(path, log, config=None):
     path = path.resolve()
     suffix = path.suffix.lower()
+    cfg = config or {}
 
     if suffix == ".csv":
-        df = load_csv(path, log)
-        yield {"path": path, "name": path.stem, "sheet": None, "df": df}
+        lf = load_csv_lazy(path, log)
+        yield {"path": path, "name": path.stem, "sheet": None, "df": None, "lf": lf}
         return
 
     if suffix in (".xlsx", ".xls"):
-        sheets = excel_to_frames(path, log)
+        max_rows = cfg.get("excel_max_rows")
+        sheets = excel_to_frames(path, log, max_rows=max_rows)
         for sheet_name, df in sheets.items():
-            yield {"path": path, "name": path.stem, "sheet": str(sheet_name), "df": df}
+            truncated = max_rows is not None and df.height >= int(max_rows)
+            yield {
+                "path": path,
+                "name": path.stem,
+                "sheet": str(sheet_name),
+                "df": df,
+                "lf": None,
+                "truncated": truncated,
+            }
         return
 
     log.warning("Unsupported file type: %s", path)

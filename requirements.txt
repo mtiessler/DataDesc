@@ -2,3 +2,6 @@ polars
 openpyxl
 streamlit
 plotly
+fastapi
+uvicorn
+python-multipart

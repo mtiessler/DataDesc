@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 import streamlit as st
 import plotly.express as px
 
@@ -26,6 +27,9 @@ st.markdown(
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 # ---------------- Sidebar ----------------
 st.sidebar.title("DataDesc")
@@ -50,6 +54,34 @@ else:
 
 st.sidebar.divider()
 show_hidden = st.sidebar.checkbox("Show hidden files", value=False)
+
+st.sidebar.divider()
+st.sidebar.subheader("Upload & Profile")
+uploads = st.sidebar.file_uploader(
+    "Drop CSV/XLSX files",
+    type=["csv", "xlsx", "xls"],
+    accept_multiple_files=True,
+)
+run_now = st.sidebar.button("Run profiling on uploads")
+
+if run_now:
+    if not uploads:
+        st.sidebar.warning("Upload at least one file.")
+    else:
+        upload_dir = ROOT / "data" / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        for f in uploads:
+            dest = upload_dir / f.name
+            dest.write_bytes(f.getbuffer())
+
+        from datadesc.config import default_config
+        from datadesc.logger import setup_logging
+        from datadesc.profile.pipeline import run_pipeline
+
+        log = setup_logging("INFO")
+        cfg = default_config()
+        run_pipeline(inputs=[str(upload_dir)], output_dir=str(output_root), config=cfg, log=log)
+        st.sidebar.success("Profiling complete. Refresh tabs to view results.")
 
 st.title("DataDesc UI")
 st.caption(f"Reading results from: {total_dir.as_posix()}")

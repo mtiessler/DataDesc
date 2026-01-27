@@ -3,6 +3,7 @@ from pathlib import Path
 import polars as pl
 
 from datadesc.writer import ensure_dir, write_text, write_json
+from datadesc.report_html import render_report_html
 
 
 def _safe_read_csv(path):
@@ -289,6 +290,8 @@ def generate_total_summary(output_root, log):
             "dataset_name": dataset_name,
             "sheet_name": sheet_name,
             "rows": int(r.get("rows") or 0),
+            "rows_sample": int(r.get("rows_sample") or 0),
+            "sampled": bool(r.get("sampled") or False),
             "columns": int(r.get("columns") or 0),
             "missing_cell_pct": float(r.get("missing_cell_pct") or 0.0),
             "duplicate_row_pct": float(r.get("duplicate_row_pct") or 0.0),
@@ -363,7 +366,7 @@ def generate_total_summary(output_root, log):
 
     # dataset quality snapshots
     top_by_rows = sources_table.select([
-        "dataset_id", "dataset_name", "sheet_name", "rows", "columns",
+        "dataset_id", "dataset_name", "sheet_name", "rows", "rows_sample", "sampled", "columns",
         "missing_cell_pct", "duplicate_row_pct",
         "numeric_cols_est", "text_cols_est", "datetime_cols_detected",
         "min_year", "max_year"
@@ -479,3 +482,9 @@ def generate_total_summary(output_root, log):
 
     write_text(total_dir / "master_summary.md", "\n".join(md))
     log.info("Wrote _total/master_summary.md")
+
+    try:
+        render_report_html(out_root, master_json, idx)
+        log.info("Wrote _total/report.html")
+    except Exception as e:
+        log.exception("Failed to write _total/report.html: %s", str(e))

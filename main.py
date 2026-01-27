@@ -20,6 +20,11 @@ def parse_args():
     p.add_argument("--max-corr-cols", type=int, default=80, help="Max numeric columns for correlations.")
     p.add_argument("--preview-rows", type=int, default=20, help="Preview rows to store.")
     p.add_argument("--max-unique-sample", type=int, default=200000, help="Sample cap for uniqueness checks.")
+    p.add_argument("--sample-rows", type=int, default=200000, help="Max rows to profile per dataset (sampling).")
+    p.add_argument("--sample-strategy", default="head", choices=["head", "random"], help="Sampling strategy.")
+    p.add_argument("--sample-seed", type=int, default=42, help="Random sampling seed.")
+    p.add_argument("--excel-max-rows", type=int, default=200000, help="Max rows to read per Excel sheet.")
+    p.add_argument("--schema-unique-mode", default="approx", choices=["approx", "exact", "sample"], help="Unique count strategy for schema.")
     return p.parse_args()
 
 
@@ -32,6 +37,11 @@ def main():
         "max_corr_cols": args.max_corr_cols,
         "preview_rows": args.preview_rows,
         "max_unique_sample": args.max_unique_sample,
+        "sample_rows": args.sample_rows,
+        "sample_strategy": args.sample_strategy,
+        "sample_seed": args.sample_seed,
+        "excel_max_rows": args.excel_max_rows,
+        "schema_unique_mode": args.schema_unique_mode,
     }
 
     run_pipeline(

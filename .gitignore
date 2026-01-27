@@ -219,6 +219,13 @@ data/*
 output/*
 !output/.gitkeep
 
+# API runtime outputs
+api_uploads/
+api_outputs/
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+
 # OS
 .DS_Store
-
