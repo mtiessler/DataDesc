@@ -164,10 +164,66 @@ DataDesc/
 
 ---
 
-## ⚛️ React Frontend (Aesthetic UI)
+## 🎛️ Advanced Usage
+
+### Custom Configuration
+
+```bash
+python main.py \
+  --inputs data external_data \
+  --output reports \
+  --top-k 20 \
+  --max-corr-cols 100 \
+  --preview-rows 50 \
+  --log-level DEBUG \
+  --sample-rows 200000 \
+  --sample-strategy head \
+  --excel-max-rows 200000 \
+  --schema-unique-mode approx
+```
+
+**Parameters:**
+- `--inputs`: Multiple input directories (supports wildcards)
+- `--output`: Custom output directory
+- `--top-k`: Number of top categorical values (default: 10)
+- `--max-corr-cols`: Max columns for correlation analysis (default: 80)
+- `--preview-rows`: Rows in data preview (default: 20)
+- `--sample-rows`: Max rows profiled per dataset (sampling for scalability)
+- `--sample-strategy`: `head` or `random` sampling strategy
+- `--excel-max-rows`: Max rows to read per Excel sheet (prevents memory blowups)
+- `--schema-unique-mode`: `approx` (fast) or `exact` (slower) for unique counts
+- `--log-level`: Logging verbosity (DEBUG, INFO, WARNING, ERROR)
+
+### Python API
+
+```python
+from datadesc.profile.pipeline import run_pipeline
+from datadesc.logger import setup_logging
+
+log = setup_logging("INFO")
+
+config = {
+    "top_k": 15,
+    "max_corr_cols": 100,
+    "preview_rows": 25,
+}
+
+results = run_pipeline(
+    inputs=["data", "external"],
+    output_dir="output",
+    config=config,
+    log=log,
+)
+
+print(f"Processed {results['datasets_processed']} datasets")
+```
+
+---
+
+## Frontend
 
 The `frontend/` folder includes a modern React + Vite UI you can deploy on Amplify.
-It provides a clean landing page, **fully interactive report**, and upload panel that posts to a backend endpoint.
+It provides a clean landing page, visual report preview, and upload panel that posts to a backend endpoint.
 
 ### Run locally
 
@@ -183,7 +239,7 @@ Set a default API endpoint with:
 VITE_API_ENDPOINT=https://api.yourdomain.com/profile npm run dev
 ```
 
-Charts in the report preview are powered by `recharts` and custom canvas renders.
+Charts in the report preview are powered by `recharts`.
 
 ### Build for production
 
@@ -196,12 +252,18 @@ npm run build
 ### Backend expectation (for uploads)
 
 The upload panel sends a `POST` request to `/profile` (configurable in the UI) with
-`multipart/form-data` containing `files`. The backend returns `job_id`, which the frontend
-uses to load the full report at `/?job=<job_id>`.
+`multipart/form-data` containing `files`. The backend should return JSON:
+
+```json
+{
+  "message": "Report ready",
+  "result_url": "https://your-domain.com/reports/<job_id>/_total/report.html"
+}
+```
 
 ---
 
-## 🧠 FastAPI Backend (Upload + Profile)
+## FastAPI Backend (Upload + Profile)
 
 The FastAPI backend accepts file uploads, runs the profiler, and serves outputs.
 
@@ -216,13 +278,52 @@ uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
 
 - `POST /profile` (multipart form) with `files`
 - `GET /jobs/{job_id}` status
-- `GET /jobs/{job_id}/summary` JSON summary for frontend report
-- `GET /jobs/{job_id}/files` file stats for generated outputs
+- `GET /jobs/{job_id}/summary` JSON summary for frontend visualizations
 - `GET /jobs/{job_id}/download` zip of outputs
 - `GET /reports/{job_id}/...` static output files
 - `GET /health`
 
 Set the React upload endpoint to `http://localhost:8000/profile`.
+
+---
+
+## 📊 Output Examples
+
+### Master Summary (master_summary.md)
+```markdown
+# Master Summary (Descriptive Statistics)
+
+## Dataset inventory
+- **Datasets processed**: 47
+- **Total rows (sum across datasets)**: 12,458,392
+- **Total columns (sum across datasets)**: 1,247
+
+## Schema composition (global)
+| dtype    | count | pct    |
+|----------|-------|--------|
+| Utf8     | 542   | 43.46% |
+| Int64    | 389   | 31.19% |
+| Float64  | 251   | 20.13% |
+| Boolean  | 65    | 5.21%  |
+
+## Temporal coverage (from datetime-like columns)
+| dataset_id | min_year | max_year |
+|------------|----------|----------|
+| a3f2b1c8   | 2018     | 2024     |
+| 5e9d4a2f   | 2015     | 2023     |
+```
+
+### Per-Dataset Report (report.md)
+```markdown
+# Customer Database (sheet: Main)
+
+## Overview
+- **rows**: 125,847
+- **columns**: 23
+- **missing_cell_pct**: 8.42%
+- **duplicate_row_pct**: 0.13%
+- **memory_bytes_estimate**: 24,567,893
+```
 
 ---
 
