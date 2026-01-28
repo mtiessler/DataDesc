@@ -418,7 +418,6 @@ export default function ReportView({ jobId, apiBase, onBack }) {
         </div>
         <div className="report-actions">
           <button onClick={onBack}>Back</button>
-          <button onClick={() => window.print()}>Export PDF</button>
           {downloadUrl && (
             <a className="ghost" href={downloadUrl}>
               Download ZIP

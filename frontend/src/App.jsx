@@ -21,7 +21,7 @@ export default function App() {
   const defaultEndpoint =
     import.meta.env.VITE_API_ENDPOINT || "http://localhost:8000/profile";
   const gaId = import.meta.env.VITE_GA_ID || "";
-  const [endpoint, setEndpoint] = useState(defaultEndpoint);
+  const [endpoint] = useState(defaultEndpoint);
   const [files, setFiles] = useState([]);
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
@@ -60,6 +60,8 @@ export default function App() {
     gtag("js", new Date());
     gtag("config", gaId, { anonymize_ip: true });
   }, [gaId, cookieConsent]);
+
+  const apiBase = endpoint.replace(/\/profile\/?$/, "");
 
   const onFiles = (list) => {
     const next = Array.from(list || []).filter(Boolean);
@@ -115,8 +117,6 @@ export default function App() {
       setMessage(err.message || "Upload failed.");
     }
   };
-
-  const apiBase = endpoint.replace(/\/profile\/?$/, "");
 
   if (jobId) {
     return (
